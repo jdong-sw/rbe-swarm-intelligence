@@ -16,20 +16,22 @@ _EMPTY = 0
 _WALL = 1
 _HAZARD = -1
 _AGENT = 2
+_MARKER = 3
 
 # Colors for rendering
 _EMPTY_COLOR = [1,1,1]
 _WALL_COLOR = [0,0,0]
 _HAZARD_COLOR = [1,0,0]
 _AGENT_COLOR = [0,0,1]
+_MARKER_COLOR = [0,1,0]
 
 # Agent parameters
 _VEL = 1
 
 class World:
     def __init__(self, width, height, num_agents, 
-                 space_fill=0.4, hazard_fill=0.2, fast=False,
-                 sensor_range=3, marker_size=3):
+                 space_fill=0.5, hazard_fill=0.2, fast=True,
+                 sensor_range=1, marker_size=3):
         self.width = width
         self.height = height
         self.num_agents = num_agents
@@ -75,6 +77,7 @@ class World:
         image = np.where(image == _WALL, _EMPTY_COLOR, image)
         image = np.where(image == _HAZARD, _HAZARD_COLOR, image)
         image = np.where(image == _AGENT, _AGENT_COLOR, image)
+        image = np.where(image == _MARKER, _MARKER_COLOR, image)
         return image
     
     
@@ -209,7 +212,7 @@ class Agent:
         
         # Check if on hazard, update alive state
         if self.world.state[new_pixel[1], new_pixel[0]] == _HAZARD:
-            self.alive = False
+            self._die()
     
     
     def proximity(self):
@@ -241,6 +244,12 @@ class Agent:
             return
         obj = obj / mag
         self.vel = -obj * _VEL
+        
+        
+    def _die(self):
+        x, y = np.round(self.pos).astype(int)
+        cv2.circle(self.world.map.grid, (x,y), self.marker_size, _MARKER, 1)
+        self.alive = False
     
         
     def __str__(self):
