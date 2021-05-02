@@ -181,7 +181,7 @@ class Agent:
         self.range = sensor_range
         self.marker_size = marker_size
         self.alive = True
-        self.map = world_map ## to be update
+        self.map = np.zeros((100,100))
         self.goal = [self.map.shape[0]/2,self.map.shape[1]/2]
         
         # Mask to help with proximity sensing
@@ -250,7 +250,7 @@ class Agent:
             return
         obj = obj / mag
         target = _get_unit_vector(self.goal, self.pos)
-        self.vel = self.vel + target -obj * _VEL
+        self.vel =  (target -obj) * _VEL
 
 
     def check_require_grid(self, block, grid_type):
@@ -260,7 +260,7 @@ class Agent:
         return False
 
     ## block_width and block_height should be a float
-    def get_possible_goals(self, block_width, block_height)
+    def get_possible_goals(self, block_width, block_height):
         block_num_hor =  math.ceil(self.map.shape[0]/block_width)
         block_num_ver =  math.ceil(self.map.shape[1]/block_height)
         block_total_num = block_num_hor*block_num_ver
