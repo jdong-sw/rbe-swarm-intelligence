@@ -249,7 +249,8 @@ class Agent:
         if mag == 0:
             return
         obj = obj / mag
-        self.vel = self.vel -obj * _VEL
+        target = _get_unit_vector(self.goal, self.pos)
+        self.vel = self.vel + target -obj * _VEL
 
 
     def check_require_grid(self, block, grid_type):
