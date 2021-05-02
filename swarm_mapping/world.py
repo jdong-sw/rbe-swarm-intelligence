@@ -10,6 +10,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import math
 
 # Grid values
 _EMPTY = 0
@@ -26,7 +27,7 @@ _AGENT_COLOR = [0,0,1]
 _MARKER_COLOR = [0,1,0]
 
 # Agent parameters
-_VEL = 1
+_VEL = 0.1 
 
 class World:
     def __init__(self, width, height, num_agents, 
@@ -180,6 +181,8 @@ class Agent:
         self.range = sensor_range
         self.marker_size = marker_size
         self.alive = True
+        self.map = world_map ## to be update
+        self.goal = [self.map.shape[0]/2,self.map.shape[1]/2]
         
         # Mask to help with proximity sensing
         self._init_sensor()
@@ -246,9 +249,42 @@ class Agent:
         if mag == 0:
             return
         obj = obj / mag
-        self.vel = -obj * _VEL
+        self.vel = self.vel -obj * _VEL
+
+
+    def check_require_grid(self, block, grid_type):
+        for row in range(block.shape[0]):
+            for col in range(block.shape[1]):
+                return block[row,col] == grid_type
+        return False
+
+    ## block_width and block_height should be a float
+    def get_possible_goals(self, block_width, block_height)
+        block_num_hor =  math.ceil(self.map.shape[0]/block_width)
+        block_num_ver =  math.ceil(self.map.shape[1]/block_height)
+        block_total_num = block_num_hor*block_num_ver
+        block_center_unitx = math.ceil(block_width/ 2.0)
+        block_center_unity = math.ceil(block_height/ 2.0)
+        goal_list = []
+        for row in range(block_num_ver):
+            for col in range(block_num_hor):
+                block = self.map[col*block_width: col*block_width+col*block_width - 1,
+                                    row*block_height:row*block_height+block_height -1]
+                check_unsearch = check_require_grid(self, block, -1)
+                if check_unsearch:
+                    goal_list.append([row*block_width+block_center_unitx, col*block_height+block_center_unity])
+        return goal_list
+
     
-        
+    def set_goal(self, goal_list):
+        goal = [self.map.shape[0]/2,self.map.shape[1]/2]
+        min_dist = -1
+        for i in range(len(goal_list)):
+            if min_dist > 0 and  _get_distance(self.pos, goal_list[i]) <min_dist:
+                goal = goal_list[i]
+        return goal
+            
+
     def __str__(self):
         return f"Agent at ({self.pos[0]},{self.pos[1]}), with " + \
             f"velocity ({self.vel[0]}, {self.vel[1]}), alive: {self.alive}"
@@ -256,3 +292,7 @@ class Agent:
             
 def _get_distance(a, b):
         return np.sqrt(pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2))
+
+def _get_unit_vector(a, b):
+    v = np.array([a[0]-b[0], a[1]-b[1]])
+    return v / np.linalg.norm(v)
