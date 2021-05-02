@@ -270,7 +270,7 @@ class Agent:
             for col in range(block_num_hor):
                 block = self.map[col*block_width: col*block_width+col*block_width - 1,
                                     row*block_height:row*block_height+block_height -1]
-                check_unsearch = check_require_grid(self, block, -1)
+                check_unsearch = check_require_grid(self, block, 0)
                 if check_unsearch:
                     goal_list.append([row*block_width+block_center_unitx, col*block_height+block_center_unity])
         return goal_list
