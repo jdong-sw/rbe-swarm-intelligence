@@ -9,5 +9,5 @@ The package has dependencies on
 - opencv-python
 - jupyterlab (optional to run example)
 
-You can also install the required dependencies using the 'requirements.txt' file with the command:
+You can also install the required dependencies using the 'requirements.txt' file with the command:\
 `pip install -r requirements.txt`
