@@ -59,6 +59,12 @@ class Map:
             self._grow_region = self._grow_region2
         else:
             self._grow_region = self._grow_region1
+            
+        # Set a "safe zone" for agents to start in
+        x = round(self.width/2)
+        y = round(self.height/2)
+        size = round(self.width/8)
+        self.safe_zone = (x, y, size)
         
         # Initialize grid
         self.grid = np.zeros((100, 100), float)
@@ -133,10 +139,8 @@ class Map:
             
         
     def _generate_rooms(self):
-        # Generate room in center for agents starting point
-        x = round(self.width/2)
-        y = round(self.height/2)
-        size = round(self.width/8)
+        # Generate safe zone
+        x, y, size = self.safe_zone
         self._grow_region((x, y), size - 2, size + 2, _EMPTY, [_EMPTY])
         
         # Keep adding rooms until fill parameter is achieved
@@ -282,6 +286,14 @@ class Map:
             
             
     def _scale_map(self, width, height):
+        scalex = width / self.width
+        scaley = height / self.height
+        x, y, r = self.safe_zone
+        x = x * scalex
+        y = y * scaley
+        r = r * min(scalex, scaley)
+        self.safe_zone = (x, y, r)
+        
         self.grid = cv2.resize(self.grid, (height, width), interpolation=cv2.INTER_NEAREST)
         self.width = width
         self.height = height
