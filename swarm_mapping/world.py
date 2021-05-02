@@ -163,9 +163,6 @@ class World:
             value=_WALL
         )
             
-    
-    def _get_distance(self, a, b):
-        return np.sqrt(pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2))
         
 
 class Agent:
@@ -199,17 +196,19 @@ class Agent:
         if debug:
             print("New position:", new_pos)
             
-        pixel = np.round(new_pos).astype(int)
+        old_pixel = np.round(self.pos).astype(int)
+        new_pixel = np.round(new_pos).astype(int)
         if debug:
-            print("Pixel position:", pixel)
+            print("Pixel position:", new_pixel)
         
         # Make sure no collisions and update position
-        tile = self.world.state[pixel[1], pixel[0]]
-        if tile == _EMPTY or tile == _HAZARD:
+        tile = self.world.state[new_pixel[1], new_pixel[0]]
+        pxl_distance = _get_distance(new_pixel, old_pixel)
+        if tile == _EMPTY or tile == _HAZARD or pxl_distance == 0:
             self.pos = new_pos
         
         # Check if on hazard, update alive state
-        if self.world.state[pixel[1], pixel[0]] == _HAZARD:
+        if self.world.state[new_pixel[1], new_pixel[0]] == _HAZARD:
             self.alive = False
     
     
@@ -242,7 +241,12 @@ class Agent:
             return
         obj = obj / mag
         self.vel = -obj * _VEL
+    
         
     def __str__(self):
         return f"Agent at ({self.pos[0]},{self.pos[1]}), with " + \
             f"velocity ({self.vel[0]}, {self.vel[1]}), alive: {self.alive}"
+            
+            
+def _get_distance(a, b):
+        return np.sqrt(pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2))
