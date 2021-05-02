@@ -45,7 +45,10 @@ class World:
         self._add_borders()
         self.state = self.map.grid.copy()
         self.visual_map = self.map.render()
-        self.agents_map = np.full((width+self.sensor_range, height+self.sensor_range), -2)
+        self.agents_map = np.full((width + 2*self.sensor_range, 
+                                   height + 2*self.sensor_range),
+                                  _UNEXPLORED)
+        
         # Populate with agents
         self._populate()
 
@@ -86,7 +89,7 @@ class World:
         return image
 
 
-    def show(self, title=None, size=(5,5), fignum=21):
+    def show(self, title=None, size=(5,5), fignum=21, show_map=True):
         """
         Plots the current state of the world using matplotlib.
 
@@ -98,6 +101,8 @@ class World:
             (width, height) of the plot in inches. The default is (5,5).
         fignum : int, optional
             Number for the figure. The default is 21.
+        show_map : bool, optional
+            Whether to show the currently mapped area
 
         Returns
         -------
@@ -105,22 +110,16 @@ class World:
 
         """
         image = self.render()
+        
+        if show_map:
+            shared_map = self.render(self.agents_map)
+            image = np.concatenate((image, shared_map), axis=1)
+        
         plt.figure(num=fignum,figsize=size);
         plt.imshow(image);
 
         if title is not None:
             plt.title(title);
-
-    def update_agents_map(self, title=None, size=(5,5), fignum=21):
-        #iterate each map space until an agent has that place discovered (!=-2)
-        for row in range(self.width):
-            for col in range(self.height):
-                if self.agents_map[row, col] == -2:
-                    for agent in self.agents:
-                        if agent.agent_map[row, col] != -2:
-                            self.agents_map[row, col] = agent.agent_map[row, col]
-                            break
-        return self.agents_map
 
 
     def _populate(self):
@@ -199,7 +198,12 @@ class Agent:
         self.alive = True
 
         # Agent's discovered map
-        self.agent_map = np.full((world.width+world.sensor_range*2, world.height+world.sensor_range*2), -2)
+        self.agent_map = np.full((world.width + world.sensor_range*2,
+                                  world.height + world.sensor_range*2), 
+                                 _UNEXPLORED)
+        
+        # Shared map between all agents
+        self.shared_map = world.agents_map
 
         # Mask to help with proximity sensing
         self._init_sensor()
@@ -239,6 +243,8 @@ class Agent:
 
         # Update agents map
         self.update_map()
+        
+        
     def proximity(self):
         x, y = np.round(self.pos).astype(int)
         proximity = self.world.state[y - self.range : y + self.range + 1,
@@ -250,15 +256,20 @@ class Agent:
     def update_map(self):
         x, y = np.round(self.pos).astype(int)
         observation = self.world.map.grid[y - self.range: y + self.range + 1,
-                                       x - self.range: x + self.range + 1]
+                                          x - self.range: x + self.range + 1]
 
         # Remove observations of self/other drones and hazards
-        observation = np.where(observation==2, 0, observation)
-        observation = np.where(observation==-1, 0, observation)
+        observation = np.where(observation==_AGENT, 0, observation)
+        observation = np.where(observation==_HAZARD, 0, observation)
 
         # Save the observation in the agent's map
         self.agent_map[y - self.range: y + self.range + 1,
                        x - self.range: x + self.range + 1] = observation
+        
+        # Also update shared central map
+        self.shared_map[y - self.range: y + self.range + 1,
+                        x - self.range: x + self.range + 1] = observation
+        
 
     def show_agent_map(self, title=None, size=(5, 5), fignum=21):
         """
@@ -277,6 +288,10 @@ class Agent:
         None.
         """
         image = self.agent_map.copy()
+        empty_mask = image == _EMPTY
+        wall_mask = image == _WALL
+        image[empty_mask] = _WALL
+        image[wall_mask] = _EMPTY
         image = np.expand_dims(image, axis=2)
         image = np.where(image == _EMPTY, _WALL_COLOR, image)
         image = np.where(image == _WALL, _EMPTY_COLOR, image)
