@@ -150,8 +150,11 @@ class World:
     def _update_state(self):
         state = self.map.grid.copy()
         for agent in self.agents:
-            pixel = np.round(agent.pos).astype(int)
-            state[pixel[1], pixel[0]] = _AGENT
+            x, y = np.round(agent.pos).astype(int)
+            state[y, x] = _AGENT
+            if not agent.alive:
+                cv2.circle(self.map.grid, (x,y), self.marker_size, _MARKER, 1)
+                
         self.state = state
         
     
@@ -212,7 +215,7 @@ class Agent:
         
         # Check if on hazard, update alive state
         if self.world.state[new_pixel[1], new_pixel[0]] == _HAZARD:
-            self._die()
+            self.alive = False
     
     
     def proximity(self):
@@ -244,12 +247,6 @@ class Agent:
             return
         obj = obj / mag
         self.vel = -obj * _VEL
-        
-        
-    def _die(self):
-        x, y = np.round(self.pos).astype(int)
-        cv2.circle(self.world.map.grid, (x,y), self.marker_size, _MARKER, 1)
-        self.alive = False
     
         
     def __str__(self):
