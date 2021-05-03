@@ -109,7 +109,7 @@ class Map:
         image = np.where(image == _EMPTY, _WALL_COLOR, image)
         image = np.where(image == _WALL, _EMPTY_COLOR, image)
         # TODO: render other robot distress signals
-        # image = np.where(image == _HAZARD, _HAZARD_COLOR, image)
+        image = np.where(image == _HAZARD, _HAZARD_COLOR, image)
         return image
     
     
