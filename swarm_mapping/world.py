@@ -29,7 +29,7 @@ _MARKER_COLOR = [0,1,0]
 _UNEXPLORED_COLOR = [.5,.5,.5]
 
 # Agent parameters
-_VEL = 0.1 
+_VEL = 1 
 
 class World:
     def __init__(self, width, height, num_agents,
@@ -197,14 +197,14 @@ class Agent:
         self.range = sensor_range
         self.marker_size = marker_size
         self.alive = True
-        self.map = np.zeros((100,100))
-        self.goal = [self.map.shape[0]/2,self.map.shape[1]/2]
+        
 
         # Agent's discovered map
         self.agent_map = np.full((world.width + world.sensor_range*2,
                                   world.height + world.sensor_range*2), 
                                  _UNEXPLORED)
-        
+        self.goal = [self.agent_map.shape[0]/2,self.agent_map.shape[1]/2]
+
         # Shared map between all agents
         self.shared_map = world.agents_map
 
@@ -246,6 +246,9 @@ class Agent:
 
         # Update agents map
         self.update_map()
+
+        goal_list = self.get_possible_goals(4, 4)
+        self.goal = self.set_goal(goal_list)
         
         
     def proximity(self):
@@ -331,7 +334,7 @@ class Agent:
             return
         obj = obj / mag
         target = _get_unit_vector(self.goal, self.pos)
-        self.vel =  (target -obj) * _VEL
+        self.vel =  target*_VEL*0.7 -obj * _VEL
 
 
     def check_require_grid(self, block, grid_type):
@@ -339,30 +342,49 @@ class Agent:
             for col in range(block.shape[1]):
                 return block[row,col] == grid_type
         return False
+    
+    def get_grid_target(self, block, block_row_index, block_col_index, grid_type, pos):
+        goal = [0,0]
+        min_dist = -1
+        for row in range(block.shape[0]):
+            for col in range(block.shape[1]):
+                if block[row,col] == grid_type:
+                    grid_row = block_row_index*row
+                    grid_col = block_col_index*col
+                    possible_goal = [grid_row,grid_col]
+                    if min_dist < 0:
+                        goal = possible_goal
+                    elif min_dist >= 0 and _get_distance(possible_goal,pos) < min_dist:
+                        goal = possible_goal
+        return goal
+
 
     ## block_width and block_height should be a float
     def get_possible_goals(self, block_width, block_height):
-        block_num_hor =  math.ceil(self.map.shape[0]/block_width)
-        block_num_ver =  math.ceil(self.map.shape[1]/block_height)
+        block_num_hor =  math.ceil(self.agent_map.shape[0]/block_width)
+        block_num_ver =  math.ceil(self.agent_map.shape[1]/block_height)
         block_total_num = block_num_hor*block_num_ver
         block_center_unitx = math.ceil(block_width/ 2.0)
         block_center_unity = math.ceil(block_height/ 2.0)
         goal_list = []
         for row in range(block_num_ver):
             for col in range(block_num_hor):
-                block = self.map[col*block_width: col*block_width+col*block_width - 1,
+                block = self.agent_map[col*block_width: col*block_width+col*block_width - 1,
                                     row*block_height:row*block_height+block_height -1]
-                check_unsearch = check_require_grid(self, block, 0)
+                check_unsearch = self.check_require_grid(block, -2)
                 if check_unsearch:
-                    goal_list.append([row*block_width+block_center_unitx, col*block_height+block_center_unity])
+                    goal_list.append(self.get_grid_target(block,row,col, -2, self.pos))
+        # print(goal_list)
         return goal_list
 
     
     def set_goal(self, goal_list):
-        goal = [self.map.shape[0]/2,self.map.shape[1]/2]
+        goal = [self.agent_map.shape[0]/2,self.agent_map.shape[1]/2]
         min_dist = -1
         for i in range(len(goal_list)):
-            if min_dist > 0 and  _get_distance(self.pos, goal_list[i]) <min_dist:
+            if min_dist < 0:
+                goal = goal_list[i]
+            elif min_dist >= 0 and  _get_distance(self.pos, goal_list[i]) <min_dist:
                 goal = goal_list[i]
         return goal
             
