@@ -29,7 +29,7 @@ _MARKER_COLOR = [0,1,0]
 _UNEXPLORED_COLOR = [.5,.5,.5]
 
 # Agent parameters
-_VEL = 1 
+_VEL = 2
 
 class World:
     def __init__(self, width, height, num_agents,
@@ -334,7 +334,11 @@ class Agent:
             return
         obj = obj / mag
         target = _get_unit_vector(self.goal, self.pos)
-        self.vel =  target*_VEL*0.7 -obj * _VEL
+        velocity = target*_VEL*0.7 -obj * _VEL
+        if velocity[0] == 0 and velocity[1]==0:
+            self.vel = -obj*_vel*1.2
+        else:
+            self.vel =  velocity
 
 
     def check_require_grid(self, block, grid_type):
