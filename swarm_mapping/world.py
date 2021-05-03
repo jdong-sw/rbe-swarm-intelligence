@@ -338,16 +338,9 @@ class Agent:
             return
         obj = obj / mag
         target = _get_unit_vector(self.goal, self.pos)
-        velocity = target*_VEL*0.2 -obj * _VEL
+        velocity = target*_VEL*0.2 -obj * _VEL 
         v_unit = velocity / np.linalg.norm(velocity)
-        # if self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 1 \
-        #         or self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 2 \
-        #             or self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 3:
-        #     self.vel = (random.uniform(0.5, 1),random.uniform(0.5, 1))
-        # elif self.agent_map[(math.floor(velocity[0]+self.pos[0]), math.floor(velocity[1]+self.pos[1]))] == 1 \
-        #         or self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 2 \
-        #             or self.agent_map[(math.floor(velocity[0]+self.pos[0]), math.floor(velocity[1]+self.pos[1]))] == 3:
-        #     self.vel = (random.uniform(1, 1.2),random.uniform(1, 1.2))
+
         if velocity[0] == 0 and velocity[1]==0:
             self.vel = -obj*_VEL*1.2
         else:
