@@ -29,7 +29,7 @@ _MARKER_COLOR = [0,1,0]
 _UNEXPLORED_COLOR = [.5,.5,.5]
 
 # Agent parameters
-_VEL = 2
+_VEL = 1
 
 class World:
     def __init__(self, width, height, num_agents,
@@ -50,6 +50,9 @@ class World:
                                    height + 2*self.sensor_range),
                                   _UNEXPLORED)
         
+        self.contour_map = np.full((width + 2*sensor_range, 
+                                   height + 2*sensor_range),
+                                  -1)
         # Populate with agents
         self._populate()
 
@@ -207,6 +210,7 @@ class Agent:
 
         # Shared map between all agents
         self.shared_map = world.agents_map
+        self.contour_map = world.contour_map
 
         # Mask to help with proximity sensing
         self._init_sensor()
@@ -247,7 +251,7 @@ class Agent:
         # Update agents map
         self.update_map()
 
-        goal_list = self.get_possible_goals(4, 4)
+        goal_list = self.get_possible_goals()
         self.goal = self.set_goal(goal_list)
         
         
@@ -334,9 +338,18 @@ class Agent:
             return
         obj = obj / mag
         target = _get_unit_vector(self.goal, self.pos)
-        velocity = target*_VEL*0.7 -obj * _VEL
+        velocity = target*_VEL*0.2 -obj * _VEL
+        v_unit = velocity / np.linalg.norm(velocity)
+        # if self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 1 \
+        #         or self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 2 \
+        #             or self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 3:
+        #     self.vel = (random.uniform(0.5, 1),random.uniform(0.5, 1))
+        # elif self.agent_map[(math.floor(velocity[0]+self.pos[0]), math.floor(velocity[1]+self.pos[1]))] == 1 \
+        #         or self.agent_map[(math.ceil(velocity[0]+self.pos[0]), math.ceil(velocity[1]+self.pos[1]))] == 2 \
+        #             or self.agent_map[(math.floor(velocity[0]+self.pos[0]), math.floor(velocity[1]+self.pos[1]))] == 3:
+        #     self.vel = (random.uniform(1, 1.2),random.uniform(1, 1.2))
         if velocity[0] == 0 and velocity[1]==0:
-            self.vel = -obj*_vel*1.2
+            self.vel = -obj*_VEL*1.2
         else:
             self.vel =  velocity
 
@@ -347,50 +360,48 @@ class Agent:
                 return block[row,col] == grid_type
         return False
     
-    def get_grid_target(self, block, block_row_index, block_col_index, grid_type, pos):
-        goal = [0,0]
-        min_dist = -1
-        for row in range(block.shape[0]):
-            for col in range(block.shape[1]):
-                if block[row,col] == grid_type:
-                    grid_row = block_row_index*row
-                    grid_col = block_col_index*col
-                    possible_goal = [grid_row,grid_col]
-                    if min_dist < 0:
-                        goal = possible_goal
-                    elif min_dist >= 0 and _get_distance(possible_goal,pos) < min_dist:
-                        goal = possible_goal
-        return goal
 
 
-    ## block_width and block_height should be a float
-    def get_possible_goals(self, block_width, block_height):
-        block_num_hor =  math.ceil(self.agent_map.shape[0]/block_width)
-        block_num_ver =  math.ceil(self.agent_map.shape[1]/block_height)
-        block_total_num = block_num_hor*block_num_ver
-        block_center_unitx = math.ceil(block_width/ 2.0)
-        block_center_unity = math.ceil(block_height/ 2.0)
+    def get_possible_goals(self):
         goal_list = []
-        for row in range(block_num_ver):
-            for col in range(block_num_hor):
-                block = self.agent_map[col*block_width: col*block_width+col*block_width - 1,
-                                    row*block_height:row*block_height+block_height -1]
-                check_unsearch = self.check_require_grid(block, -2)
-                if check_unsearch:
-                    goal_list.append(self.get_grid_target(block,row,col, -2, self.pos))
-        # print(goal_list)
+        contour_groups = self.find_contours()
+        for i in range(len(contour_groups)):
+            new_list = contour_groups[i]
+            for j in range(len(new_list)):
+                if self.agent_map[new_list[j][0][0],new_list[j][0][1]] != 1 and self.agent_map[new_list[j][0][0],new_list[j][0][1]] != 3 :
+                    goal_list.append((new_list[j][0][0],new_list[j][0][1]))
         return goal_list
 
     
     def set_goal(self, goal_list):
         goal = [self.agent_map.shape[0]/2,self.agent_map.shape[1]/2]
-        min_dist = -1
+        max_dist = -1
         for i in range(len(goal_list)):
-            if min_dist < 0:
+            if max_dist < 0:
                 goal = goal_list[i]
-            elif min_dist >= 0 and  _get_distance(self.pos, goal_list[i]) <min_dist:
+            elif max_dist >= 0 and  _get_distance(self.pos, goal_list[i]) > max_dist:
                 goal = goal_list[i]
         return goal
+    
+    def find_contours(self):
+        w = self.world
+        filter_map = np.full((w.width + 2*w.sensor_range, 
+                                   w.height + 2*w.sensor_range),
+                                  -1)
+        for row in range(w.agents_map.shape[0]):
+            for col in range(w.agents_map.shape[1]):
+                if w.agents_map[(row,col)] == -2:
+                    filter_map[(row,col)] = 1
+                else:
+                    filter_map[(row,col)] = 0
+        filter_map = w.render(filter_map)
+        filter_map_copy = ((filter_map+1)*255/2).astype('uint8')
+        imgray = cv2.cvtColor(filter_map_copy, cv2.COLOR_BGR2GRAY)
+        ret, thresh = cv2.threshold(imgray, 127, 255, 0)
+        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(filter_map_copy, contours, -1, (0,255,0), 3)
+        self.contour_map = filter_map_copy
+        return contours
             
 
     def __str__(self):
