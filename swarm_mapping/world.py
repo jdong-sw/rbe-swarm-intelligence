@@ -33,11 +33,12 @@ _VEL = 1
 class World:
     def __init__(self, width, height, num_agents,
                  space_fill=0.5, hazard_fill=0.2, fast=True,
-                 sensor_range=1, marker_size=3):
+                 sensor_range=1, imaging_range=5, marker_size=3):
         self.width = width
         self.height = height
         self.num_agents = num_agents
         self.sensor_range = sensor_range
+        self.imaging_range = imaging_range
         self.marker_size = marker_size
 
         # Generate map
@@ -157,7 +158,7 @@ class World:
             vel = vel / np.linalg.norm(vel) * _VEL
 
             # Add agent
-            a = Agent(i, self, pos, vel, self.sensor_range, self.marker_size)
+            a = Agent(i, self, pos, vel, self.sensor_range, self.imaging_range, self.marker_size)
             self.agents.append(a)
             occupied.add((pixel[0], pixel[1]))
 
@@ -188,24 +189,26 @@ class World:
 
 
 class Agent:
-    def __init__(self, num, world, init_pos, init_vel, sensor_range, marker_size):
+    def __init__(self, num, world, init_pos, init_vel, 
+                 sensor_range, imaging_range, marker_size):
         self.num = num
         self.world = world
         self.pos = np.array(init_pos)
         self.vel = np.array(init_vel)
-        self.range = sensor_range
+        self.prox_range = sensor_range
+        self.imaging_range = imaging_range
         self.marker_size = marker_size
         self.alive = True
 
         # Agent's discovered map
-        self.agent_map = np.full((world.width + world.sensor_range*2,
-                                  world.height + world.sensor_range*2), 
+        self.agent_map = np.full((world.width + sensor_range*2,
+                                  world.height + sensor_range*2), 
                                  _UNEXPLORED)
         
         # Shared map between all agents
         self.shared_map = world.agents_map
 
-        # Mask to help with proximity sensing
+        # Mask to help with proximity sensing and imaging
         self._init_sensor()
 
 
@@ -215,7 +218,7 @@ class Agent:
             return
 
         # Update velocity
-        self._diffuse()
+        self._update_vel()
 
         # Update position
         if debug:
@@ -233,6 +236,8 @@ class Agent:
 
         # Make sure no collisions and update position
         tile = self.world.state[new_pixel[1], new_pixel[0]]
+        if debug:
+            print("Tile:", tile)
         pxl_distance = _get_distance(new_pixel, old_pixel)
         if tile == _EMPTY or tile == _HAZARD or pxl_distance == 0:
             self.pos = new_pos
@@ -247,28 +252,34 @@ class Agent:
         
     def proximity(self):
         x, y = np.round(self.pos).astype(int)
-        proximity = self.world.state[y - self.range : y + self.range + 1,
-                                     x - self.range : x + self.range + 1]
+        proximity = self.world.state[y - self.prox_range : y + self.prox_range + 1,
+                                     x - self.prox_range : x + self.prox_range + 1]
         proximity = np.multiply(proximity, self._mask).clip(0, 1)
         return proximity
+    
+    
+    def camera(self):
+        x, y = np.round(self.pos).astype(int)
+        imaging = self.world.state[y - self.imaging_range : y + self.imaging_range + 1,
+                                   x - self.imaging_range : x + self.imaging_range + 1]
+        return imaging
 
 
     def update_map(self):
         x, y = np.round(self.pos).astype(int)
-        observation = self.world.map.grid[y - self.range: y + self.range + 1,
-                                          x - self.range: x + self.range + 1]
+        observation = self.camera();
 
         # Remove observations of self/other drones and hazards
         observation = np.where(observation==_AGENT, 0, observation)
         observation = np.where(observation==_HAZARD, 0, observation)
 
         # Save the observation in the agent's map
-        self.agent_map[y - self.range: y + self.range + 1,
-                       x - self.range: x + self.range + 1] = observation
+        self.agent_map[y - self.imaging_range: y + self.imaging_range + 1,
+                       x - self.imaging_range: x + self.imaging_range + 1] = observation
         
         # Also update shared central map
-        self.shared_map[y - self.range: y + self.range + 1,
-                        x - self.range: x + self.range + 1] = observation
+        self.shared_map[y - self.imaging_range: y + self.imaging_range + 1,
+                        x - self.imaging_range: x + self.imaging_range + 1] = observation
         
 
     def show_agent_map(self, title=None, size=(5, 5), fignum=21):
@@ -308,27 +319,62 @@ class Agent:
 
 
     def _init_sensor(self):
-        size = 2*self.range + 1
+        size = 2*self.prox_range + 1
         self._mask = np.zeros((size, size), int)
         if size > 3:
-            cv2.circle(self._mask, (self.range, self.range), self.range, 1, -1)
+            cv2.circle(self._mask, (self.prox_range, self.prox_range), 
+                       self.prox_range, 1, -1)
         else:
             self._mask.fill(1)
+            
+    
+    def _update_vel(self):
+        obj = self._diffuse()
+        search = self._search()
+        noise = 2 * np.random.rand(2) - 1
+        
+        vel = obj + 0.2 * search + 0.1 * noise
+        mag = np.linalg.norm(obj)
+        vel = vel / mag
+        self.vel = vel * _VEL
 
 
     def _diffuse(self):
+        # Get unit vector to obstacle
         M = cv2.moments(self.proximity())
         if M['m00'] == 0:
-            return
-        cx = M['m10']/M['m00'] - self.range
-        cy = M['m01']/M['m00'] - self.range
+            return self.vel
+        cx = M['m10']/M['m00'] - self.prox_range
+        cy = M['m01']/M['m00'] - self.prox_range
         obj = np.array([cx, cy])
         mag = np.linalg.norm(obj)
         if mag == 0:
-            return
+            return self.vel
         obj = obj / mag
-        self.vel = -obj * _VEL
-
+        
+        # Apply reflection across object vector
+        vel = -1*(2 * np.dot(self.vel, obj)/np.dot(obj, obj) * obj - self.vel)
+        return vel
+    
+    def _search(self):
+        # Get only unexplored areas
+        image = self.camera()
+        image = image.clip(_UNEXPLORED, 0)
+        image = np.where(image == _HAZARD, 0, image)
+        image = -0.5 * image
+        
+        # Get centroid of unexplored area
+        M = cv2.moments(image)
+        if M['m00'] == 0:
+            return np.zeros(2)
+        cx = M['m10']/M['m00'] - self.imaging_range
+        cy = M['m01']/M['m00'] - self.imaging_range
+        vect = np.array([cx, cy])
+        mag = np.linalg.norm(vect)
+        if mag == 0:
+            return np.zeros(2)
+        vect = vect / mag
+        return vect
 
     def __str__(self):
         return f"Agent at ({self.pos[0]},{self.pos[1]}), with " + \
