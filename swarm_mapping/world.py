@@ -45,7 +45,7 @@ class World:
         self._add_borders()
         self.state = self.map.grid.copy()
         self.visual_map = self.map.render()
-        self.agents_map = np.full((width+self.sensor_range, height+self.sensor_range), -2)
+        self.agents_map = np.full((width+6, height+6), -2)
         # Populate with agents
         self._populate()
 
