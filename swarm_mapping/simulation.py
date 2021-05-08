@@ -7,7 +7,6 @@ import numpy as np
 WIDTH = 100
 HEIGHT = 100
 SPACE_FILL = 0.5
-HAZ_FILL = 0.2
 
 # Display settings
 DISPLAY_WIDTH = 800
@@ -22,7 +21,7 @@ MAX_ITERATIONS = 1000
 
 class Simulation:
     # takes a list of simulation parameters and runs them in succession (or parallel?)
-    # params: [[num_agents, marker_size, sensor_range, seed]], +agent_velocity?
+    # params: [[num_agents, marker_size, haz_fill, seed]], +agent_velocity?
     def __init__(self, parameters: list, map_width, map_height, explore_thresh, show_map=True):
         self.params = parameters
         self.map_width = map_width
@@ -44,9 +43,9 @@ class Simulation:
             print("Running new simulation...")
             num_agents = sim_params[0]
             marker_size = sim_params[1]
-            sensor_range = sim_params[2]
+            haz_fill = sim_params[2]
             random.seed(sim_params[3])
-            world = self.create_world(num_agents, marker_size, sensor_range)
+            world = self.create_world(num_agents, marker_size, haz_fill)
             step = 0
             explored = [0]
             dead = [0]
@@ -81,10 +80,10 @@ class Simulation:
 
             cv2.destroyAllWindows()
 
-    def create_world(self, num_agents, marker_size, sensor_range):
+    def create_world(self, num_agents, marker_size, haz_fill):
         world = World(self.map_width, self.map_height, num_agents,
-                      space_fill=SPACE_FILL, hazard_fill=HAZ_FILL, fast=False,
-                      sensor_range=sensor_range, marker_size=marker_size)
+                      space_fill=SPACE_FILL, hazard_fill=haz_fill, fast=False,
+                      marker_size=marker_size)
         return world
 
     @staticmethod

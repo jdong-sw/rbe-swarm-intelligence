@@ -4,7 +4,7 @@ from swarm_mapping.simulation import Simulation
 display_width = 800
 display_height = 800
 
-# params: [[num_agents, marker_size, sensor_range]], +agent_velocity?
+# params: [[num_agents, marker_size, haz_fill, seed]], +agent_velocity?
 params = [[100, 3, 3],
           [200, 1, 1]]
 height = 100
