@@ -1,3 +1,4 @@
+import random
 import cv2
 from swarm_mapping.world import World
 import numpy as np
@@ -44,6 +45,7 @@ class Simulation:
             num_agents = sim_params[0]
             marker_size = sim_params[1]
             sensor_range = sim_params[2]
+            random.seed(sim_params[3])
             world = self.create_world(num_agents, marker_size, sensor_range)
             step = 0
             explored = [0]
