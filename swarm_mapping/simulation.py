@@ -1,3 +1,4 @@
+import csv
 import random
 import cv2
 from swarm_mapping.world import World
@@ -17,8 +18,6 @@ PRINT_FREQ = 50
 MAX_ITERATIONS = 1000
 
 
-# TODO: some kind of controls for the maps, fixed seeds or something (maps are highly imbalanced)
-
 class Simulation:
     # takes a list of simulation parameters and runs them in succession (or parallel?)
     # params: [[num_agents, marker_size, haz_fill, seed]], +agent_velocity?
@@ -36,11 +35,18 @@ class Simulation:
         # +6 is to match the border present on the Map() class
         self.size = (map_width+6)*(map_height+6)
 
+        # begin simulation
+        self.start_sim()
+        # save results
+        self.save_data()
+
     def start_sim(self):
         # run simulation for each line in parameters
         # check every iteration and stop when any threshold is reached
+        sim_num = 0
         for sim_params in self.params:
-            print("Running new simulation...")
+            sim_num += 1
+            print("Running new simulation (" + str(sim_num) + " of " + str(len(self.params)) + ")...")
             num_agents = sim_params[0]
             marker_size = sim_params[1]
             haz_fill = sim_params[2]
@@ -104,3 +110,12 @@ class Simulation:
                 agents_dead += 1
         return agents_dead
 
+    def save_data(self):
+        print("Saving data...")
+        with open("explored_data.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(self.explored_data)
+        with open("dead_data.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(self.dead_data)
+        print("Done.")
