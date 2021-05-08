@@ -82,6 +82,25 @@ class World:
         self._update_state()
 
 
+    def set_marker(self, radius):
+        """
+        Set the marker radius
+
+        Parameters
+        ----------
+        radius : int
+            Radius of the hazard marker.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.marker_size = radius
+        for agent in self.agents:
+            agent.marker_size = radius
+
+
     def render(self, frame=None):
         """
         Renders the current state of the world as a RGB image numpy array.
