@@ -27,7 +27,7 @@ _HAZARD_COLOR = [1,0,0]
 _CONNECTED = 4
 
 class Map:
-    def __init__(self, width, height, space_fill=0.4, hazard_fill=0.2, fast=False):
+    def __init__(self, width, height, space_fill=0.5, hazard_fill=0.2, fast=False):
         """
         Parameters
         ----------
