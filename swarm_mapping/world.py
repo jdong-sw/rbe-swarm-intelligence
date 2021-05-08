@@ -172,6 +172,8 @@ class World:
             while True:
                 # Get safe zone
                 safe_x, safe_y, safe_size = self.map.safe_zone
+                safe_x += self.imaging_range
+                safe_y += self.imaging_range
 
                 # Choose random x inside safe zone
                 x = random.randint(0, int(safe_size))
