@@ -1,3 +1,5 @@
+import csv
+import random
 import cv2
 from swarm_mapping.world import World
 import numpy as np
@@ -6,7 +8,6 @@ import numpy as np
 WIDTH = 100
 HEIGHT = 100
 SPACE_FILL = 0.5
-HAZ_FILL = 0.2
 
 # Display settings
 DISPLAY_WIDTH = 800
@@ -17,11 +18,9 @@ PRINT_FREQ = 50
 MAX_ITERATIONS = 1000
 
 
-# TODO: some kind of controls for the maps, fixed seeds or something (maps are highly imbalanced)
-
 class Simulation:
     # takes a list of simulation parameters and runs them in succession (or parallel?)
-    # params: [[num_agents, marker_size, sensor_range]], +agent_velocity?
+    # params: [[num_agents, marker_size, haz_fill, seed]], +agent_velocity?
     def __init__(self, parameters: list, map_width, map_height, explore_thresh, show_map=True):
         self.params = parameters
         self.map_width = map_width
@@ -36,15 +35,23 @@ class Simulation:
         # +6 is to match the border present on the Map() class
         self.size = (map_width+6)*(map_height+6)
 
+        # begin simulation
+        self.start_sim()
+        # save results
+        self.save_data()
+
     def start_sim(self):
         # run simulation for each line in parameters
         # check every iteration and stop when any threshold is reached
+        sim_num = 0
         for sim_params in self.params:
-            print("Running new simulation...")
+            sim_num += 1
+            print("Running new simulation (" + str(sim_num) + " of " + str(len(self.params)) + ")...")
             num_agents = sim_params[0]
             marker_size = sim_params[1]
-            sensor_range = sim_params[2]
-            world = self.create_world(num_agents, marker_size, sensor_range)
+            haz_fill = sim_params[2]
+            random.seed(sim_params[3])
+            world = self.create_world(num_agents, marker_size, haz_fill)
             step = 0
             explored = [0]
             dead = [0]
@@ -79,10 +86,10 @@ class Simulation:
 
             cv2.destroyAllWindows()
 
-    def create_world(self, num_agents, marker_size, sensor_range):
+    def create_world(self, num_agents, marker_size, haz_fill):
         world = World(self.map_width, self.map_height, num_agents,
-                      space_fill=SPACE_FILL, hazard_fill=HAZ_FILL, fast=False,
-                      sensor_range=sensor_range, marker_size=marker_size)
+                      space_fill=SPACE_FILL, hazard_fill=haz_fill, fast=False,
+                      marker_size=marker_size)
         return world
 
     @staticmethod
@@ -103,3 +110,12 @@ class Simulation:
                 agents_dead += 1
         return agents_dead
 
+    def save_data(self):
+        print("Saving data...")
+        with open("explored_data.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(self.explored_data)
+        with open("dead_data.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(self.dead_data)
+        print("Done.")
