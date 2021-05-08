@@ -22,7 +22,7 @@ MAX_ITERATIONS = 1000
 
 class Simulation:
     # takes a list of simulation parameters and runs them in succession (or parallel?)
-    # params: [[num_agents, marker_size, sensor_range]], +agent_velocity?
+    # params: [[num_agents, marker_size, sensor_range, seed]], +agent_velocity?
     def __init__(self, parameters: list, map_width, map_height, explore_thresh, show_map=True):
         self.params = parameters
         self.map_width = map_width
