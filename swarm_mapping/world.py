@@ -46,10 +46,12 @@ class World:
         # Generate map
         if m is None:
             self.map = Map(width, height, space_fill, hazard_fill, fast)
+            self.grid = self.map.grid
         else:
             self.map = m
+            self.grid = m.grid.copy()
+        self.state = self.grid.copy()
         self._add_borders()
-        self.state = self.map.grid.copy()
         self.visual_map = self.map.render()
         self.agents_map = np.full((width + 2*self.imaging_range, 
                                    height + 2*self.imaging_range),
@@ -203,14 +205,14 @@ class World:
 
 
     def _update_state(self):
-        state = self.map.grid.copy()
+        state = self.grid.copy()
         for agent in self.agents:
             x, y = np.round(agent.pos).astype(int)
             if agent.alive:
                 state[y, x] = _AGENT
             else:
                 state[y, x] = _DEAD
-                cv2.circle(self.map.grid, (x,y), self.marker_size, _MARKER, 1)
+                cv2.circle(self.grid, (x,y), self.marker_size, _MARKER, 1)
                 # No need to update the shared map, let agents discover
                 #cv2.circle(self.agents_map, (x,y), self.marker_size, _MARKER, 1)
 
@@ -218,7 +220,7 @@ class World:
 
 
     def _add_borders(self):
-        self.map.grid = cv2.copyMakeBorder(
+        self.grid = cv2.copyMakeBorder(
             self.map.grid,
             top=self.imaging_range,
             bottom=self.imaging_range,
