@@ -1,6 +1,11 @@
 from swarm_mapping.simulation import Simulation
 import cv2
 import numpy as np
+import importlib
+import sys
+importlib.reload(sys.modules['swarm_mapping.simulation'])
+
+
 # Display size
 display_width = 800
 display_height = 800
@@ -10,8 +15,9 @@ params = [[100, 3, 3],
           [200, 1, 1]]
 height = 100
 width = 100
+unexplored_thresh = .6
 
-sim = Simulation(params, height, width)
+sim = Simulation(params, height, width, unexplored_thresh)
 sim.start_sim()
 
 # while True:
@@ -29,3 +35,4 @@ sim.start_sim()
 #     world.step()
 #     step += 1
 # cv2.destroyAllWindows()
+
