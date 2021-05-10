@@ -46,7 +46,7 @@ class World:
         # Generate map
         if m is None:
             self.map = Map(width, height, space_fill, hazard_fill, fast)
-            self.grid = self.map.grid
+            self.grid = self.map.grid.copy()
         else:
             self.map = m
             self.grid = m.grid.copy()
@@ -100,7 +100,7 @@ class World:
         """
         self.marker_size = radius
         for agent in self.agents:
-            agent.marker_size = radius
+            agent.set_marker(radius)
 
 
     def render(self, frame=None):
@@ -214,7 +214,7 @@ class World:
                 state[y, x] = _AGENT
             else:
                 state[y, x] = _DEAD
-                cv2.circle(self.grid, (x,y), self.marker_size, _MARKER, 1)
+                cv2.circle(state, (x,y), self.marker_size, _MARKER, 1)
                 # No need to update the shared map, let agents discover
                 #cv2.circle(self.agents_map, (x,y), self.marker_size, _MARKER, 1)
 
@@ -310,6 +310,11 @@ class Agent:
 
         # Update agents map
         self._update_map()
+        
+        
+    def set_marker(self, radius):
+        self.marker_size = radius
+        self._init_sensor()
         
         
     def multisense(self):
@@ -478,11 +483,9 @@ class Agent:
     
     def _escape(self, image):
         # Check if within marker
-        try:
-            image = np.multiply(image, self._mask)
-        except:
-            print(self)
-            raise
+        if image.shape != self._mask.shape:
+            return np.zeros(2)
+        image = np.multiply(image, self._mask)
         if _DEAD in image:
             # Return strong velocity away from marker
             image = (image == _DEAD).astype(float)
