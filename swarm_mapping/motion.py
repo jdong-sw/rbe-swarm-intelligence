@@ -52,6 +52,8 @@ class MotionGenerator:
             
         
     def _diffuse(self, proximity):
+        # Implementation of basic diffusive behavior
+        
         # Get unit vector to obstacle
         obj = _calc_centroid(proximity)
         if obj is None:
