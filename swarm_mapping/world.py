@@ -6,6 +6,7 @@ Created on Tue Apr 20 14:18:10 2021
 """
 
 from .map import Map
+from .motion import MotionGenerator
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,13 +36,15 @@ _VEL = 1
 class World:
     def __init__(self, width, height, num_agents,
                  space_fill=0.5, hazard_fill=0.2, fast=True,
-                 sensor_range=1, imaging_range=5, marker_size=3, m=None):
+                 sensor_range=1, imaging_range=5, marker_size=3, m=None,
+                 motion="diffuse"):
         self.width = width
         self.height = height
         self.num_agents = num_agents
         self.sensor_range = sensor_range
         self.imaging_range = imaging_range
         self.marker_size = marker_size
+        self.motion = motion
 
         # Generate map
         if m is None:
@@ -202,6 +205,7 @@ class World:
 
             # Add agent
             a = Agent(i, self, pos, vel, self.sensor_range, self.imaging_range, self.marker_size)
+            a.motion_generator.select_motion(self.motion)
             self.agents.append(a)
             occupied.add((pixel[0], pixel[1]))
 
@@ -245,6 +249,7 @@ class Agent:
         self.imaging_range = imaging_range
         self.marker_size = marker_size
         self.alive = True
+        self.motion_generator = MotionGenerator(self)
 
         # Agent's discovered map
         self.agent_map = np.full((world.width + imaging_range*2,
@@ -441,7 +446,7 @@ class Agent:
     
     def _update_vel(self):
         proximity, image = self.multisense()
-        obj = self._diffuse(proximity)
+        obj = self.motion_generator.get_vel(proximity)
         search = self._search(image)
         escape = self._escape(image)
         noise = 2 * np.random.rand(2) - 1
@@ -454,18 +459,7 @@ class Agent:
         mag = np.linalg.norm(obj)
         vel = vel / mag
         self.vel = vel * _VEL
-
-
-    def _diffuse(self, proximity):
-        # Get unit vector to obstacle
-        obj = _calc_centroid(proximity)
-        if obj is None:
-            return self.vel
         
-        # Apply reflection across object vector
-        vel = -1*(2 * np.dot(self.vel, obj)/np.dot(obj, obj) * obj - self.vel)
-        return vel
-    
     
     def _search(self, image):
         # Get only unexplored areas
