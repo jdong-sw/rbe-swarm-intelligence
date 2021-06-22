@@ -459,8 +459,33 @@ class Agent:
         mag = np.linalg.norm(obj)
         vel = vel / mag
         self.vel = vel * _VEL
-        
-    
+
+    def _update_vel_beta(self):
+        # Bias towards unexplored local areas
+        proximity, image = self.multisense()
+        obj = self.motion_generator.get_vel(proximity)
+        search = self._search(image)
+        noise = 0
+        # old noise used on every step:
+        # noise = 2 * np.random.rand(2) - 1
+
+        # Escape if caught inside a hazard circle
+        escape = self._escape(image)
+        if not (escape == 0).all():
+            self.vel = escape * _VEL
+            return
+
+        # Random direction change (rho)
+        # TODO: conditional based on cauchy distribution
+            # TODO: change direction based on cauchy distribution
+            # noise = something
+
+        vel = obj + 0.4 * search + noise
+        mag = np.linalg.norm(obj)
+        vel = vel / mag
+        self.vel = vel * _VEL
+
+
     def _search(self, image):
         # Get only unexplored areas
         image = image.clip(_UNEXPLORED, 0)
