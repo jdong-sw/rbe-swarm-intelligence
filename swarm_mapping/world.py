@@ -30,6 +30,13 @@ _MARKER_COLOR = [0,0,1]
 _UNEXPLORED_COLOR = [.5,.5,.5]
 _DEAD_COLOR = [0,0,1]
 
+
+# Motion Parameters
+_ALPHA = 1
+_BETA = 0.4
+_GAMMA = 0.1
+_DELTA = 0.1
+
 # Agent parameters
 _VEL = 1
 
@@ -283,7 +290,7 @@ class Agent:
         if not self.alive:
             return
         
-        self._update_vel()
+        self._update_vel_beta()
 
         # Update position
         if debug:
@@ -463,9 +470,9 @@ class Agent:
     def _update_vel_beta(self):
         # Bias towards unexplored local areas
         proximity, image = self.multisense()
-        obj = self.motion_generator.get_vel(proximity)
-        search = self._search(image)
-        noise = 0
+        # obj = self.motion_generator.get_vel(proximity)
+        # search = self._search(image)
+        # noise = 0
         # old noise used on every step:
         # noise = 2 * np.random.rand(2) - 1
 
@@ -475,14 +482,17 @@ class Agent:
             self.vel = escape * _VEL
             return
 
+
         # Random direction change (rho)
         # TODO: conditional based on cauchy distribution
             # TODO: change direction based on cauchy distribution
             # noise = something
 
-        vel = obj + 0.4 * search + noise
-        mag = np.linalg.norm(obj)
-        vel = vel / mag
+        vel = self.motion_generator.get_vel(proximity, image, _ALPHA, _BETA, _GAMMA, _DELTA)
+        
+        # vel = obj + 0.4 * search + noise
+        # mag = np.linalg.norm(obj)
+        # vel = vel / mag
         self.vel = vel * _VEL
 
 
