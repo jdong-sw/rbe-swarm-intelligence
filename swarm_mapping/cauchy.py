@@ -19,18 +19,18 @@ class SampleCauchyDistribution:
         #custDist noes not need to be normalized. Add this condition to increase performance.
         #Best performance for max_{x in [x0,x1]} custDist(x) = 1
         print("Generating " + str(self.sample_size) + " samples from a Cauchy distribution with rho = " + str(self.rho) + "...")
-        samples=[]
-        nLoop=0
-        while len(samples)<self.sample_size:
-            x=np.random.uniform(low=self.x0,high=self.x1)
-            prop=self.cauchy_angle_dist(x)
+        samples = []
+        nLoop = 0
+        while len(samples) < self.sample_size:
+            x = np.random.uniform(low=self.x0, high=self.x1)
+            prop = self.cauchy_angle_dist(x)
             assert 0 <= prop <= 1
-            if np.random.uniform(low=0,high=1) <=prop:
+            if np.random.uniform(low=0, high=1) <= prop:
                 samples += [x]
-            nLoop+=1
+            nLoop += 1
         t1 = time.time()
         total_time = t1-t0
-        print("Time spent generating samples: " + str(round(total_time,2)) + "s.")
+        print("Time spent generating samples: " + str(round(total_time, 2)) + "s.")
         self.samples = samples
 
 
@@ -48,11 +48,11 @@ class SampleCauchyDistribution:
         bins = np.linspace(self.x0, self.x1, int(self.x1 - self.x0 + 1))
         hist = np.histogram(self.samples, bins)[0]
         hist = hist / np.sum(hist)
-        plt.bar((bins[:-1] + bins[1:]) / 2, hist, width=.96, label='Sampled distribution')
+        plt.bar((bins[:-1] + bins[1:]) / 2, hist, width=.2, label='Sampled distribution')
         # dist
         grid = np.linspace(self.x0, self.x1, 10000)
-        discCustDist = np.array([self.cauchy_angle_dist(x) for x in grid])  # distrete version
-        discCustDist *= 1 / (grid[1] - grid[0]) / np.sum(discCustDist)
+        discCustDist = np.array([self.cauchy_angle_dist(x) for x in grid])
+        # discCustDist *= 1.0 / (grid[1] - grid[0]) / np.sum(discCustDist)
         plt.plot(grid, discCustDist, label='Cauchy Angle PDF', color='C1', linewidth=4)
         # decoration
         plt.legend(loc=3, bbox_to_anchor=(1, 0))
@@ -60,5 +60,5 @@ class SampleCauchyDistribution:
 
 
 # testing
-# sca = SampleCauchyDistribution(rho=0.05, sample_size=10**5)
-# samples = sca.samples
+sca = SampleCauchyDistribution(rho=0.05, sample_size=10**5)
+sca.check_accuracy()
