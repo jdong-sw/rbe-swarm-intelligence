@@ -457,7 +457,7 @@ class Agent:
         search = self._search(image)
         escape = self._escape(image)
         noise = 2 * np.random.rand(2) - 1
-        
+
         if not (escape == 0).all():
             self.vel = escape * _VEL
             return
@@ -484,7 +484,7 @@ class Agent:
 
 
         # Random direction change (rho)
-        # TODO: conditional based on cauchy distribution
+        # TODO: conditional based on power distribution
             # TODO: change direction based on cauchy distribution
             # noise = something
 

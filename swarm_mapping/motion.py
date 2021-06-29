@@ -35,6 +35,7 @@ class MotionGenerator:
     def __init__(self, agent):
         self._agent = agent
         self._motion = self._diffuse
+        self.steps_since_change = 0
         
         
     def get_vel(self, proximity, image, alpha, beta, gamma, delta):
@@ -110,8 +111,23 @@ class MotionGenerator:
         else:
             return vect
 
-    
-    
+
+    def _random_walk_step(self):
+        # count how many steps since last direction change
+        self.steps_since_change += 1
+        # check for direction change
+        change = _sample_custom_power(self.alpha, self.steps_since_change) # TODO: add power law sampling
+        if change:
+            # change direction
+            velx = self._agent.vel[0]
+            vely = self._agent.vel[1]
+            theta = np.arctan(vely, velx)
+            new_polar_dir = _sample_custom_cauchy(self.rho, theta)
+            new_vel = [np.cos(new_polar_dir), np.sin(new_polar_dir)]
+            self.steps_since_change = 0
+        return new_vel
+
+
 def _get_distance(a, b):
     return np.sqrt(pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2))
     
@@ -133,3 +149,10 @@ def _calc_centroid(im):
         return None
 
     return vect / mag
+
+def _sample_custom_cauchy(rho, theta):
+    return (1 - rho^2) / (2*np.pi * (1 + rho^2 - 2*rho*np.cos(theta)))
+
+def _sample_custom_power(alpha, step):
+    # TODO: implement me
+    return 1
