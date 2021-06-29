@@ -10,6 +10,8 @@ import cv2
 
 
 # Grid values
+from swarm_mapping.cauchy import SampleCauchyDistribution
+
 _EMPTY = 0
 _WALL = 1
 _HAZARD = -1
@@ -112,7 +114,9 @@ class MotionGenerator:
             return vect
 
 
-    def _random_walk_step(self):
+    def _random_walk(self):
+        # Initialize a cauchy sample distribution
+        sca = SampleCauchyDistribution(rho=self.rho, sample_size=10**5)
         # count how many steps since last direction change
         self.steps_since_change += 1
         # check for direction change
@@ -122,8 +126,8 @@ class MotionGenerator:
             velx = self._agent.vel[0]
             vely = self._agent.vel[1]
             theta = np.arctan(vely, velx)
-            new_polar_dir = _sample_custom_cauchy(self.rho, theta)
-            new_vel = [np.cos(new_polar_dir), np.sin(new_polar_dir)]
+            theta += sca.pick_sample()
+            new_vel = [np.cos(theta), np.sin(theta)]
             self.steps_since_change = 0
         return new_vel
 
@@ -150,8 +154,6 @@ def _calc_centroid(im):
 
     return vect / mag
 
-def _sample_custom_cauchy(rho, theta):
-    return (1 - rho^2) / (2*np.pi * (1 + rho^2 - 2*rho*np.cos(theta)))
 
 def _sample_custom_power(alpha, step):
     # TODO: implement me
