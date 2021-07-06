@@ -59,14 +59,14 @@ class MotionGenerator:
         return self._motion(proximity, image, alpha, beta, gamma, delta)
         
     
-    def select_motion(self, motion):
+    def select_motion(self, motion, alpha=0):
         """
         Select motion algorithm for velocity updating.
 
         Parameters
         ----------
         motion : string
-            Name of motion algorithm to use. Accepts "diffuse".
+            Name of motion algorithm to use. Accepts "diffuse", "rcw".
 
         Returns
         -------
@@ -75,7 +75,9 @@ class MotionGenerator:
         """
         if (motion.lower() == "diffuse"):
             self._motion = self._diffuse
-            
+
+        if (motion.lower() == "rcw"):
+            self._motion = self._random_walk
         
     def _diffuse(self, proximity, image, alpha, beta, gamma, delta):
         # Implementation of basic diffusive behavior
@@ -120,7 +122,7 @@ class MotionGenerator:
         # count how many steps since last direction change
         self.steps_since_change += 1
         # check for direction change
-        change = _sample_custom_power(self.alpha, self.steps_since_change) # TODO: add power law sampling
+        change = _sample_custom_power(self.alpha, self.steps_since_change)
         if change:
             # change direction
             velx = self._agent.vel[0]
@@ -129,6 +131,9 @@ class MotionGenerator:
             theta += sca.pick_sample()
             new_vel = [np.cos(theta), np.sin(theta)]
             self.steps_since_change = 0
+
+        vel = alpha*obj_vel + beta*search + delta*noise
+
         return new_vel
 
 
@@ -156,5 +161,7 @@ def _calc_centroid(im):
 
 
 def _sample_custom_power(alpha, step):
-    # TODO: implement me
-    return 1
+    # beta: scale factor
+    beta = 5
+    return np.exp(-(step**alpha) / (2*alpha*beta)) / np.sqrt(alpha*beta)
+

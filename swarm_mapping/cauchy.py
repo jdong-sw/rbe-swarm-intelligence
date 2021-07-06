@@ -38,11 +38,11 @@ class SampleCauchyDistribution:
         return self.samples[np.random.randint(self.sample_size)]
 
     def cauchy_angle_dist(self, x):
-        rho=self.rho
+        rho = self.rho
         return (1 - rho**2) / (2*np.pi * (1 + rho**2 - 2*rho*np.cos(x)))
 
     def check_accuracy(self):
-        # Plots the generated samples in a histogram with the PDF overlaid to check the accuracy of the samples.
+        # Plots the generated samples in a histogram with the PDF plot to check the accuracy of the samples.
         import matplotlib.pyplot as plt
         # hist
         bins = np.linspace(self.x0, self.x1, int(self.x1 - self.x0 + 1))
@@ -60,5 +60,5 @@ class SampleCauchyDistribution:
 
 
 # testing
-sca = SampleCauchyDistribution(rho=0.05, sample_size=10**5)
-sca.check_accuracy()
+# sca = SampleCauchyDistribution(rho=0.05, sample_size=10**5)
+# sca.check_accuracy()
