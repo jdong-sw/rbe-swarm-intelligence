@@ -30,13 +30,6 @@ _MARKER_COLOR = [0,0,1]
 _UNEXPLORED_COLOR = [.5,.5,.5]
 _DEAD_COLOR = [0,0,1]
 
-
-# Motion Parameters
-_ALPHA = 1
-_BETA = 0.4
-_GAMMA = 0.1
-_DELTA = 0.1
-
 # Agent parameters
 _VEL = 1
 
@@ -256,7 +249,7 @@ class Agent:
         self.imaging_range = imaging_range
         self.marker_size = marker_size
         self.alive = True
-        self.motion_generator = MotionGenerator(self)
+        self.motion_generator = MotionGenerator(self, world.motion)
 
         # Agent's discovered map
         self.agent_map = np.full((world.width + imaging_range*2,
@@ -290,7 +283,7 @@ class Agent:
         if not self.alive:
             return
         
-        self._update_vel_beta()
+        self._update_vel()
 
         # Update position
         if debug:
@@ -382,7 +375,6 @@ class Agent:
         imaging = self.world.state[y - self.imaging_range : y + self.imaging_range + 1,
                                    x - self.imaging_range : x + self.imaging_range + 1]
         return imaging
-        
 
     def show_agent_map(self, title=None, size=(5, 5), fignum=21):
         """
@@ -419,7 +411,6 @@ class Agent:
 
         return image
 
-
     def _init_sensor(self):
         size = 2*self.imaging_range + 1
         self._mask = np.zeros((size, size), int)
@@ -428,8 +419,7 @@ class Agent:
                        self.marker_size+1, 1, -1)
         else:
             self._mask.fill(1)
-            
-            
+
     def _update_map(self):
         if not self.alive:
             return
@@ -449,45 +439,34 @@ class Agent:
         # Also update shared central map
         self.shared_map[y - self.imaging_range: y + self.imaging_range + 1,
                         x - self.imaging_range: x + self.imaging_range + 1] = observation
-            
-    
+
     def _update_vel(self):
         proximity, image = self.multisense()
-        obj = self.motion_generator.get_vel(proximity)
-        search = self._search(image)
+        object_avoidance = self.motion_generator.object_avoidance(proximity)
+        search = self.motion_generator.search(image)
         escape = self._escape(image)
-        noise = 2 * np.random.rand(2) - 1
 
-        if not (escape == 0).all():
-            self.vel = escape * _VEL
-            return
-        
-        vel = obj + 0.4 * search + 0.1 * noise
-        mag = np.linalg.norm(obj)
-        vel = vel / mag
-        self.vel = vel * _VEL
-
-    def _update_vel_beta(self):
-        # Bias towards unexplored local areas
-        proximity, image = self.multisense()
-
-        obj = self.motion_generator.get_vel(proximity)
-        search = self._search(image)
-        noise = 0
-
-        # old noise used on every step:
-        # noise = 2 * np.random.rand(2) - 1
-
-        # Escape if caught inside a hazard circle
-        escape = self._escape(image)
+        if not np.array_equal(object_avoidance, np.zeros(2)):
+            motion = self.motion_generator.get_vel()
+        else:
+            motion = np.zeros(2)
         if not (escape == 0).all():
             self.vel = escape * _VEL
             return
 
-        vel = self.motion_generator.get_vel(proximity, image, _ALPHA, _BETA, _GAMMA, _DELTA)
-        
-        vel = obj + 0.4 * search + noise
-        mag = np.linalg.norm(obj)
+        noise = self.motion_generator.noise()
+
+        # Old method, new implementation
+        # obj, search, motion, noise
+        w1, w2, w3, w4 = 1, .4, 1, .1
+
+        if not np.array_equal(search, np.zeros(2)):
+            print(search)
+        if not np.array_equal(motion, np.zeros(2)):
+            print(motion)
+
+        vel = w1*object_avoidance + w2*search + w3*motion + w4*noise
+        mag = np.linalg.norm(vel)
         vel = vel / mag
         self.vel = vel * _VEL
 
@@ -504,8 +483,7 @@ class Agent:
             return np.zeros(2)
         else:
             return vect
-    
-    
+
     def _escape(self, image):
         # Check if within marker
         if image.shape != self._mask.shape:
@@ -520,7 +498,6 @@ class Agent:
             return -1*vect
         else:
             return np.zeros(2)
-
 
     def __str__(self):
         return f"Agent at ({self.pos[0]},{self.pos[1]}), with " + \

@@ -34,13 +34,14 @@ _VEL = 1
 
 
 class MotionGenerator:
-    def __init__(self, agent):
+    def __init__(self, agent, motion):
         self._agent = agent
-        self._motion = self._diffuse
         self.steps_since_change = 0
+        self._sca = None
+        self._motion = None
+        self.select_motion(motion)
         
-        
-    def get_vel(self, proximity, image, alpha, beta, gamma, delta):
+    def get_vel(self):
         """
         Obtains the velocity vector given the proximity sensor readings and 
         choice of motion algorithm.
@@ -56,10 +57,16 @@ class MotionGenerator:
             Velocity vector from current motion algorithm.
 
         """
-        return self._motion(proximity, image, alpha, beta, gamma, delta)
-        
-    
-    def select_motion(self, motion, alpha=0):
+        if self._motion == "diffuse":
+            return self._agent.vel
+
+        if self._motion == "rcw":
+            return self.random_walk()
+
+        else:
+            return 1
+
+    def select_motion(self, motion):
         """
         Select motion algorithm for velocity updating.
 
@@ -74,68 +81,59 @@ class MotionGenerator:
 
         """
         if (motion.lower() == "diffuse"):
-            self._motion = self._diffuse
+            self._motion = "diffuse"
 
         if (motion.lower() == "rcw"):
-            self._motion = self._random_walk
+            self._motion = "rcw"
         
-    def _diffuse(self, proximity, image, alpha, beta, gamma, delta):
+    def noise(self):
         # Implementation of basic diffusive behavior
-        
-        #explored vector
-        search = self._search(image)
-
-        #noise vector
         noise = 2 * np.random.rand(2) - 1
-        
+        return noise
+
+    def random_walk(self, alpha=1.8, rho=0.5):
+        # Initialize a cauchy sample distribution
+        if self._sca is None:
+            self._sca = SampleCauchyDistribution(rho=rho, sample_size=10**5)
+        # Roll for direction change
+        change = _sample_custom_power(alpha, self.steps_since_change)
+        if change:
+            # change direction
+            velx = self._agent.vel[0]
+            vely = self._agent.vel[1]
+            theta = np.arctan(vely, velx)
+            theta += self._sca.pick_sample()
+            new_vel = [np.cos(theta), np.sin(theta)]
+            self.steps_since_change = 0
+        # count how many steps since last direction change
+        self.steps_since_change += 1
+        return new_vel
+
+    def object_avoidance(self, proximity):
+        # Obstacle avoidance:
         # Get unit vector to obstacle
         obj = _calc_centroid(proximity)
         if obj is None:
-            return self._agent.vel
-        
-        # Apply reflection across object vector
-        obj_vel = -1*(2 * np.dot(self._agent.vel, obj)/np.dot(obj, obj) * obj - self._agent.vel)
+            return np.zeros(2)
+        else:
+            # Apply reflection across object vector
+            object_avoidance = -1 * (2 * np.dot(self._agent.vel, obj) / np.dot(obj, obj) * obj - self._agent.vel)
+            # Override agent velocity
+            self._agent.vel = [0, 0]
+            return object_avoidance
 
-        vel = alpha*obj_vel + beta*search + delta*noise
-        mag = np.linalg.norm(obj_vel)
-        vel = vel / mag
-        return vel
-
-
-    def _search(self, image):
+    def search(self, image):
         # Get only unexplored areas
         image = image.clip(_UNEXPLORED, 0)
         image = np.where(image == _HAZARD, 0, image)
         image = -0.5 * image
-        
+
         # Get unit vector to centroid of unexplored area
         vect = _calc_centroid(image)
         if vect is None:
             return np.zeros(2)
         else:
             return vect
-
-
-    def _random_walk(self):
-        # Initialize a cauchy sample distribution
-        sca = SampleCauchyDistribution(rho=self.rho, sample_size=10**5)
-        # count how many steps since last direction change
-        self.steps_since_change += 1
-        # check for direction change
-        change = _sample_custom_power(self.alpha, self.steps_since_change)
-        if change:
-            # change direction
-            velx = self._agent.vel[0]
-            vely = self._agent.vel[1]
-            theta = np.arctan(vely, velx)
-            theta += sca.pick_sample()
-            new_vel = [np.cos(theta), np.sin(theta)]
-            self.steps_since_change = 0
-
-        vel = alpha*obj_vel + beta*search + delta*noise
-
-        return new_vel
-
 
 def _get_distance(a, b):
     return np.sqrt(pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2))

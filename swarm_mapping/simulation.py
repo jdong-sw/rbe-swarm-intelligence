@@ -19,14 +19,15 @@ MAX_ITERATIONS = 1000
 
 
 class Simulation:
-    # takes a list of simulation parameters and runs them in succession (or parallel?)
-    # params: [[num_agents, marker_size, haz_fill, seed]], +agent_velocity?
-    def __init__(self, parameters: list, map_width, map_height, explore_thresh, show_map=True):
+    # takes a list of simulation parameters and runs them in succession
+    # params: [[num_agents, marker_size, haz_fill, seed]]
+    def __init__(self, parameters: list, map_width, map_height, explore_thresh, show_map=True, movement="diffuse"):
         self.params = parameters
         self.map_width = map_width
         self.map_height = map_height
         self.explore_thresh = explore_thresh
         self.show_map = show_map
+        self.movement = movement
 
         # Stats for analysis
         self.explored_data = []
@@ -51,7 +52,7 @@ class Simulation:
             marker_size = sim_params[1]
             haz_fill = sim_params[2]
             random.seed(sim_params[3])
-            world = self.create_world(num_agents, marker_size, haz_fill)
+            world = self.create_world(num_agents, marker_size, haz_fill, self.movement)
             step = 0
             explored = [0]
             dead = [0]
@@ -74,7 +75,7 @@ class Simulation:
                     image = world.render()
                     shared_map = world.render(world.agents_map)
                     frame = np.concatenate((image, shared_map), axis=1)
-                    frame = cv2.resize(frame, (DISPLAY_WIDTH*2, DISPLAY_HEIGHT), interpolation = cv2.INTER_AREA)
+                    frame = cv2.resize(frame, (DISPLAY_WIDTH*2, DISPLAY_HEIGHT), interpolation=cv2.INTER_AREA)
                     cv2.imshow('Simulation Map', cv2.cvtColor((frame*255).astype(np.uint8), cv2.COLOR_RGB2BGR))
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
@@ -86,8 +87,8 @@ class Simulation:
 
             cv2.destroyAllWindows()
 
-    def create_world(self, num_agents, marker_size, haz_fill):
-        world = World(self.map_width, self.map_height, num_agents,
+    def create_world(self, num_agents, marker_size, haz_fill, movement):
+        world = World(self.map_width, self.map_height, num_agents, movement,
                       space_fill=SPACE_FILL, hazard_fill=haz_fill, fast=False,
                       marker_size=marker_size)
         return world
