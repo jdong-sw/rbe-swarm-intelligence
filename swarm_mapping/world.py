@@ -442,11 +442,17 @@ class Agent:
 
     def _update_vel(self):
         proximity, image = self.multisense()
-        object_avoidance = self.motion_generator.object_avoidance(proximity)
+        # object_avoidance = self.motion_generator.object_avoidance(proximity)
         search = self.motion_generator.search(image)
         escape = self._escape(image)
 
-        if not np.array_equal(object_avoidance, np.zeros(2)):
+        obj = _calc_centroid(proximity)
+        if obj is None:
+            return self.vel
+        # Apply reflection across object vector
+        object_avoidance = -1 * (2 * np.dot(self.vel, obj) / np.dot(obj, obj) * obj - self.vel)
+
+        if np.array_equal(object_avoidance, np.zeros(2)):
             motion = self.motion_generator.get_vel()
         else:
             motion = np.zeros(2)
@@ -458,12 +464,7 @@ class Agent:
 
         # Old method, new implementation
         # obj, search, motion, noise
-        w1, w2, w3, w4 = 1, .4, 1, .1
-
-        if not np.array_equal(search, np.zeros(2)):
-            print(search)
-        if not np.array_equal(motion, np.zeros(2)):
-            print(motion)
+        w1, w2, w3, w4 = 1, .4, 0, .1
 
         vel = w1*object_avoidance + w2*search + w3*motion + w4*noise
         mag = np.linalg.norm(vel)

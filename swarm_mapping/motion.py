@@ -64,6 +64,7 @@ class MotionGenerator:
             return self.random_walk()
 
         else:
+            print("Invalid motion algorithm selected!")
             return 1
 
     def select_motion(self, motion):
