@@ -240,7 +240,7 @@ class World:
 
 class Agent:
     def __init__(self, num, world, init_pos, init_vel, 
-                 sensor_range, imaging_range, marker_size):
+                 sensor_range, imaging_range, marker_size, motion_weights=[1, .4, 0, .1]):
         self.num = num
         self.world = world
         self.pos = np.array(init_pos)
@@ -250,6 +250,7 @@ class Agent:
         self.marker_size = marker_size
         self.alive = True
         self.motion_generator = MotionGenerator(self, world.motion)
+        self.w = motion_weights
 
         # Agent's discovered map
         self.agent_map = np.full((world.width + imaging_range*2,
@@ -261,7 +262,6 @@ class Agent:
 
         # Mask to help with proximity sensing and imaging
         self._init_sensor()
-
 
     def update(self, dt, debug=False):
         """
@@ -317,14 +317,10 @@ class Agent:
         if self.world.state[new_pixel[1], new_pixel[0]] == _HAZARD:
             self.alive = False
 
-        
-        
-        
     def set_marker(self, radius):
         self.marker_size = radius
         self._init_sensor()
-        
-        
+
     def multisense(self):
         """
         Get proximity and camera sensor data.
@@ -341,8 +337,7 @@ class Agent:
         image = self.camera()
         unexplored = self.check_map()
         return proximity, image, unexplored
-        
-        
+
     def proximity(self):
         """
         Get proximity data as a 2D array where 0 is empty space and 1 is
@@ -362,8 +357,7 @@ class Agent:
         else:
             proximity = proximity.clip(0, 1)
         return proximity
-    
-    
+
     def camera(self):
         """
         Get nearby environmental data as a 2D array. Can see everything except
@@ -462,35 +456,31 @@ class Agent:
 
     def _update_vel(self):
         proximity, image, unexplored = self.multisense()
-        # object_avoidance = self.motion_generator.object_avoidance(proximity)
         search = self.motion_generator.search(unexplored)
         escape = self._escape(image)
 
         obj = _calc_centroid(proximity)
-        if obj is None:
-            return self.vel
-        # Apply reflection across object vector
-        object_avoidance = -1 * (2 * np.dot(self.vel, obj) / np.dot(obj, obj) * obj - self.vel)
-
+        if obj is not None:
+            # Apply reflection across object vector if object detected
+            object_avoidance = -1 * (2 * np.dot(self.vel, obj) / np.dot(obj, obj) * obj - self.vel)
+        else:
+            object_avoidance = np.zeros(2)
+        # preserve velocity if no obstacle detected, otherwise 0
         if np.array_equal(object_avoidance, np.zeros(2)):
             motion = self.motion_generator.get_vel()
         else:
             motion = np.zeros(2)
+        # Escape if caught inside hazard marker
         if not (escape == 0).all():
             self.vel = escape * _VEL
             return
 
         noise = self.motion_generator.noise()
-
-        # Old method, new implementation
-        # obj, search, motion, noise
-        w1, w2, w3, w4 = 1, .4, 0, .1
-
-        vel = w1*object_avoidance + w2*search + w3*motion + w4*noise
+        w = self.w
+        vel = w[0]*object_avoidance + w[1]*search + w[2]*motion + w[3]*noise
         mag = np.linalg.norm(vel)
         vel = vel / mag
         self.vel = vel * _VEL
-
 
     def _search(self, image):
         # Get only unexplored areas
@@ -523,7 +513,6 @@ class Agent:
     def __str__(self):
         return f"Agent at ({self.pos[0]},{self.pos[1]}), with " + \
             f"velocity ({self.vel[0]}, {self.vel[1]}), alive: {self.alive}"
-
 
 
 def _get_distance(a, b):

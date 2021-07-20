@@ -59,9 +59,16 @@ class MotionGenerator:
         """
         if self._motion == "diffuse":
             return self._agent.vel
-
         if self._motion == "rcw":
             return self.random_walk()
+
+        # an idea for how to run tests
+        if self._motion == "rcw_test0":
+            return self.random_walk(alpha=1.4, rho=0.5)
+        if self._motion == "rcw_test1":
+            return self.random_walk(alpha=1.6, rho=0.5)
+        if self._motion == "rcw_test2":
+            return self.random_walk(alpha=2.0, rho=0.5)
 
         else:
             print("Invalid motion algorithm selected!")
