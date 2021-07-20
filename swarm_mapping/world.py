@@ -282,8 +282,6 @@ class Agent:
         # Do nothing if dead
         if not self.alive:
             return
-        
-        self._update_vel()
 
         # Update position
         if debug:
@@ -313,6 +311,9 @@ class Agent:
         if self.world.state[new_pixel[1], new_pixel[0]] == _HAZARD:
             self.alive = False
 
+        # Update velocity
+        self._update_vel()
+
         # Update agents map
         self._update_map()
         
@@ -336,7 +337,8 @@ class Agent:
         """
         proximity = self.proximity()
         image = self.camera()
-        return proximity, image
+        unexplored = self.check_map()
+        return proximity, image, unexplored
         
         
     def proximity(self):
@@ -374,6 +376,22 @@ class Agent:
         x, y = np.round(self.pos).astype(int)
         imaging = self.world.state[y - self.imaging_range : y + self.imaging_range + 1,
                                    x - self.imaging_range : x + self.imaging_range + 1]
+        return imaging
+    
+    def check_map(self):
+        """
+        Get nearby environmental data as a 2D array. Can see everything except
+        hazard tiles.
+
+        Returns
+        -------
+        imaging : numpy.ndarray
+            2D array of environment.
+
+        """
+        x, y = np.round(self.pos).astype(int)
+        imaging = self.shared_map[y - self.imaging_range : y + self.imaging_range + 1,
+                                  x - self.imaging_range : x + self.imaging_range + 1]
         return imaging
 
     def show_agent_map(self, title=None, size=(5, 5), fignum=21):
@@ -413,7 +431,7 @@ class Agent:
 
     def _init_sensor(self):
         size = 2*self.imaging_range + 1
-        self._mask = np.zeros((size, size), int)
+        self._mask = np.zeros((size, size), np.uint8)
         if size > 3:
             cv2.circle(self._mask, (self.imaging_range, self.imaging_range), 
                        self.marker_size+1, 1, -1)
@@ -441,9 +459,9 @@ class Agent:
                         x - self.imaging_range: x + self.imaging_range + 1] = observation
 
     def _update_vel(self):
-        proximity, image = self.multisense()
+        proximity, image, unexplored = self.multisense()
         # object_avoidance = self.motion_generator.object_avoidance(proximity)
-        search = self.motion_generator.search(image)
+        search = self.motion_generator.search(unexplored)
         escape = self._escape(image)
 
         obj = _calc_centroid(proximity)
