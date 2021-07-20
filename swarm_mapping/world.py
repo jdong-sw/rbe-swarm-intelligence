@@ -283,6 +283,12 @@ class Agent:
         if not self.alive:
             return
 
+        # Update velocity
+        self._update_vel()
+        
+        # Update agents map
+        self._update_map()
+
         # Update position
         if debug:
             print("Current position:", self.pos)
@@ -311,11 +317,7 @@ class Agent:
         if self.world.state[new_pixel[1], new_pixel[0]] == _HAZARD:
             self.alive = False
 
-        # Update velocity
-        self._update_vel()
-
-        # Update agents map
-        self._update_map()
+        
         
         
     def set_marker(self, radius):
