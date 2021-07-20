@@ -472,6 +472,7 @@ class Agent:
         if vect is None:
             return np.zeros(2)
         else:
+            print(vect)
             return vect
     
     
