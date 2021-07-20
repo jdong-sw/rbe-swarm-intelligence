@@ -37,7 +37,7 @@ class World:
     def __init__(self, width, height, num_agents,
                  space_fill=0.5, hazard_fill=0.2, fast=True,
                  sensor_range=1, imaging_range=5, marker_size=3, m=None,
-                 motion="diffuse", motion_weights=[1, .4, 0, .1]):
+                 motion="diffuse", motion_weights=[10, .8, 1, .01]):
         self.width = width
         self.height = height
         self.num_agents = num_agents
@@ -241,7 +241,7 @@ class World:
 
 class Agent:
     def __init__(self, num, world, init_pos, init_vel, 
-                 sensor_range, imaging_range, marker_size, motion_weights=[1, .4, 0, .1]):
+                 sensor_range, imaging_range, marker_size, motion_weights=[10, .8, 1, .01]):
         self.num = num
         self.world = world
         self.pos = np.array(init_pos)
