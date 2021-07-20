@@ -37,7 +37,7 @@ class World:
     def __init__(self, width, height, num_agents,
                  space_fill=0.5, hazard_fill=0.2, fast=True,
                  sensor_range=1, imaging_range=5, marker_size=3, m=None,
-                 motion="diffuse"):
+                 motion="diffuse", motion_weights=[1, .4, 0, .1]):
         self.width = width
         self.height = height
         self.num_agents = num_agents
@@ -45,6 +45,7 @@ class World:
         self.imaging_range = imaging_range
         self.marker_size = marker_size
         self.motion = motion
+        self.motion_weights = motion_weights
 
         # Generate map
         if m is None:
@@ -204,7 +205,7 @@ class World:
             vel = vel / np.linalg.norm(vel) * _VEL
 
             # Add agent
-            a = Agent(i, self, pos, vel, self.sensor_range, self.imaging_range, self.marker_size)
+            a = Agent(i, self, pos, vel, self.sensor_range, self.imaging_range, self.marker_size, self.motion_weights)
             a.motion_generator.select_motion(self.motion)
             self.agents.append(a)
             occupied.add((pixel[0], pixel[1]))
